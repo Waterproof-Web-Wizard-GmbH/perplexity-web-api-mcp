@@ -1,144 +1,191 @@
 # Perplexity Web API MCP Server
 
-<p>
-    <a href="https://cursor.com/en/install-mcp?name=perplexity-web&config=eyJ0eXBlIjoic3RkaW8iLCJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBhbnRvbmx4L3BlcnBsZXhpdHktd2ViLWFwaS1tY3AiXSwiZW52Ijp7IlBFUlBMRVhJVFlfU0VTU0lPTl9UT0tFTiI6IiJ9fQ==" target="_blank">
-        <img src="https://custom-icon-badges.demolab.com/badge/Install_in_Cursor-000000?style=for-the-badge&logo=cursor-ai-white" alt="Install in Cursor">
-    </a>
-    <a href="https://vscode.dev/redirect/mcp/install?name=perplexity-web&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40antonlx%2Fperplexity-web-api-mcp%22%5D%2C%22env%22%3A%7B%22PERPLEXITY_SESSION_TOKEN%22%3A%22%22%7D%7D" target="_blank">
-        <img src="https://custom-icon-badges.demolab.com/badge/Install_in_VS_Code-007ACC?style=for-the-badge&logo=vsc&logoColor=white" alt="Install in VS Code">
-    </a>
-    <a href="https://www.npmjs.com/package/@antonlx/perplexity-web-api-mcp" target="_blank">
-        <img
-            src="https://img.shields.io/npm/v/%40antonlx%2Fperplexity-web-api-mcp?style=for-the-badge&logo=npm&logoColor=white&color=CB3837"
-            alt="NPM Version" />
-    </a>
-</p>
+MCP (Model Context Protocol) server that exposes Perplexity AI search, research, and reasoning as tools for Claude Code, Codex, Cursor, VS Code, Zed, and other MCP clients.
 
-MCP (Model Context Protocol) server that exposes Perplexity AI search, research, and reasoning capabilities as tools.
+It talks to the same web endpoints the Perplexity website uses and authenticates with your own browser session. No Perplexity API key and no per-request fees; a free account works, a Pro subscription unlocks the Pro models and higher quotas.
 
-This repository is the [`AntonIXO` fork](https://github.com/AntonIXO/perplexity-web-api-mcp) of the [original project by `mishamyrt`](https://github.com/mishamyrt/perplexity-web-api-mcp). Fork releases are published as [`@antonlx/perplexity-web-api-mcp`](https://www.npmjs.com/package/@antonlx/perplexity-web-api-mcp).
+## Why this fork
 
-## No API Key Required
+- [mishamyrt](https://github.com/mishamyrt/perplexity-web-api-mcp) wrote the original project. It was archived in April 2026 at release 0.11.0 after Perplexity changed the schema of its SSE responses and the parser stopped working.
+- [AntonIXO](https://github.com/AntonIXO/perplexity-web-api-mcp) forked it, fixed the parsing of the new `blocks` SSE shape, and continued development up to v0.12.3.
+- This repository starts from AntonIXO v0.12.3 and adds the fix for Perplexity's new session scheme (v0.13.0). Perplexity replaced NextAuth: the session cookie is now `__Secure-pplx.session.<account-uuid>`, and every request has to carry an `x-pplx-account` header. Without the header the backend does not fail; it quietly answers as an anonymous user, so searches return nothing and quotas read as exhausted. Details are in [What changed in v0.13.0](#what-changed-in-v0130).
 
-This MCP server uses your Perplexity account session directly — **no API key needed**.
+Both earlier projects are MIT licensed, and so is this one. Fixes that also apply upstream will be offered to AntonIXO.
 
-Perplexity offers a separate [paid API](https://docs.perplexity.ai/guides/pricing) with per-request pricing that is charged independently from your Pro subscription. With this MCP, you don't need to pay for API access — your existing Perplexity subscription (or even a free account) is enough.
+## Disclaimer
 
-Simply extract the session token from your browser cookies, and you're ready to use Perplexity search, research, and reasoning in your IDE.
+This is an unofficial project and is not affiliated with, endorsed by, or supported by Perplexity AI.
 
-## Tokenless Mode
+It uses Perplexity's undocumented web endpoints together with your own browser session. Those endpoints can change at any time without notice, and when they do, this server may stop working until someone fixes it. Using the web endpoints outside of a browser may conflict with Perplexity's Terms of Service. Use it at your own risk and review the terms that apply to your account.
 
-The server can run **without any authentication tokens**. In this mode:
-
-- Only `perplexity_search` (links only) and `perplexity_ask` (answer with sources) are available — `perplexity_research` and `perplexity_reason` require tokens.
-- Both tools use the `turbo` model; `PERPLEXITY_ASK_MODEL` and `PERPLEXITY_REASON_MODEL` cannot be set (the server will throw an error if they are).
-- File attachments (`files` parameter) are unavailable — they require tokens.
-
-To use tokenless mode, simply omit `PERPLEXITY_SESSION_TOKEN` from your configuration.
-
-For full access to all tools and model selection, provide your session token as described in the [Configuration](#configuration) section below.
+Your session cookie grants full access to your Perplexity account. Treat it like a password: keep it out of shell history, commits, screenshots, and bug reports.
 
 ## Requirements
 
-### Supported Platforms
+Prebuilt binaries are published for:
 
 - macOS (arm64, x86_64)
 - Linux (x86_64, aarch64)
 - Windows (x86_64)
 
+Other platforms can build from source (see [Building from source](#building-from-source)).
+
 ## Installation
 
-For MCP clients, use the npm package directly (no global install required):
+### Installer script
+
+macOS and Linux:
 
 ```bash
-npx -y @antonlx/perplexity-web-api-mcp
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/dhuettner/perplexity-web-api-mcp/releases/latest/download/perplexity-web-api-mcp-installer.sh | sh
 ```
 
-To install the latest prebuilt binary on macOS or Linux:
-
-```bash
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/AntonIXO/perplexity-web-api-mcp/releases/latest/download/perplexity-web-api-mcp-installer.sh | sh
-```
-
-On Windows PowerShell:
+Windows (PowerShell):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/AntonIXO/perplexity-web-api-mcp/releases/latest/download/perplexity-web-api-mcp-installer.ps1 | iex"
+irm https://github.com/dhuettner/perplexity-web-api-mcp/releases/latest/download/perplexity-web-api-mcp-installer.ps1 | iex
 ```
 
-Platform archives and checksums are available on the [GitHub Releases page](https://github.com/AntonIXO/perplexity-web-api-mcp/releases/latest).
+The installer places the binary in `~/.cargo/bin/perplexity-web-api-mcp` (`%USERPROFILE%\.cargo\bin` on Windows). Make sure that directory is on your `PATH`, or use the absolute path in your MCP client configuration.
+
+### Other options
+
+- Platform archives and `.sha256` checksum files are on the [Releases page](https://github.com/dhuettner/perplexity-web-api-mcp/releases/latest).
+- Build and install with Cargo (Rust 1.91 or newer):
+
+  ```bash
+  cargo install --git https://github.com/dhuettner/perplexity-web-api-mcp perplexity-web-api-mcp
+  ```
+
+  Windows builds need extra tooling for BoringSSL; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+- Docker (local build, Streamable HTTP transport): see [Docker](#docker).
 
 ## Configuration
 
-### Getting Your Token
+### Getting your session cookie
 
-This server requires a Perplexity AI account. You need to extract the session token from your browser cookies:
+1. Log in to [perplexity.ai](https://www.perplexity.ai) in your browser.
+2. Open Developer Tools (F12, or right-click and choose Inspect).
+3. Go to Application, then Cookies, then `https://www.perplexity.ai`.
+4. Find the cookie whose name starts with `__Secure-pplx.session.`. The part after the last dot is your account UUID.
+5. Copy the full cookie **name** into `PERPLEXITY_SESSION_COOKIE_NAME` and the cookie **value** into `PERPLEXITY_SESSION_TOKEN`.
 
-1. Log in to [perplexity.ai](https://www.perplexity.ai) in your browser
-2. Open Developer Tools (F12 or right-click → Inspect)
-3. Go to Application → Cookies → `https://www.perplexity.ai`
-4. Copy the value of `__Secure-next-auth.session-token` → use as `PERPLEXITY_SESSION_TOKEN`
+A JSON export from the Cookie-Editor browser extension contains the same two fields (`name` and `value`) if you prefer that route.
 
-### Environment Variables
+The account UUID for the `x-pplx-account` header is derived from the cookie name automatically. Session cookies expire; when the server starts answering with empty results, repeat these steps.
 
-- `PERPLEXITY_SESSION_TOKEN` (optional): Perplexity session token (`__Secure-next-auth.session-token` cookie). Required for `perplexity_research`, `perplexity_reason`, `perplexity_computer`, `perplexity_view_chat`, connectors, and file attachments. The CSRF token is fetched automatically — no `PERPLEXITY_CSRF_TOKEN` needed.
-- `PERPLEXITY_ASK_MODEL` (optional, requires token): Model for `perplexity_ask`.
-  Valid values: `turbo`, `pro-auto` (default), `pro-upgraded`, `sonar`, `nemotron-3-super`, `claude-4.6-sonnet`, `claude-4.6-opus`, `gemini-3.0-flash`, `gemini-3.0-pro`, `gpt-5-pro`, `gpt-5.3-codex`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.2`, `gpt-5.2-pro`, `grok-4.1`.
-- `PERPLEXITY_REASON_MODEL` (optional, requires token): Model for `perplexity_reason`.
-  Valid values: `gemini-3.1-pro` (default), `gemini-3.0-flash-high`, `claude-4.6-sonnet-thinking`, `claude-4.6-opus-thinking`, `gpt-5-thinking`, `gpt-5.1-thinking`, `gpt-5.2-thinking`, `gpt-5.4-thinking`, `grok-4.1-reasoning`, `kimi-k2.5-thinking`.
-- `PERPLEXITY_COMPUTER_MODEL` (optional, requires token): Model for `perplexity_computer`.
-  Valid values: `asi`, `asi-beta`, `claude-4.6-sonnet` / `claude-4.6-sonnet-thinking`, `claude-4.6-opus` / `claude-4.6-opus-thinking` (default), `gpt-5.4`, `kimi`, `qwen`.
-- **`raw:` escape hatch:** any of the three model vars also accepts `raw:<preference>` to pass an arbitrary Perplexity preference string straight through, for models newer than this build's validated list (e.g. `PERPLEXITY_REASON_MODEL=raw:glm_5_2`). No recompile needed. **Important:** each mode only accepts models from its own family — `PERPLEXITY_ASK_MODEL` takes an "ask"-family preference, `PERPLEXITY_REASON_MODEL` takes a "reasoning"-family preference, and the two are not interchangeable. Setting a reasoning-only model (e.g. GLM 5.2 via `raw:glm_5_2`) as `PERPLEXITY_ASK_MODEL` will make `perplexity_ask` silently return `answer: null` instead of erroring — Perplexity's backend accepts the (wrong-family) preference string but produces no output for it. If `perplexity_ask` or `perplexity_reason` starts returning `null` answers after changing a model var, check that the model actually belongs to that tool's family before assuming a rate-limit or auth issue. See [Discovering available models](#discovering-available-models) below for how to find which family a model preference belongs to.
-- `PERPLEXITY_TIMEOUT_SECS` (optional, default: `30`): Request timeout in seconds for fast modes (search, ask, reason).
-- `PERPLEXITY_LONG_TIMEOUT_SECS` (optional, default: `600`): Request timeout in seconds for long-running modes — **Deep Research**, Computer, and Document Review. Raise this if deep-research runs are being cut off.
-  **Note:** this timeout lives inside the Perplexity HTTP client only. If you're also being cut off by your *MCP client's own* tool-call timeout (a separate, client-side setting — see [Progress heartbeats](#progress-heartbeats-for-long-running-tools) below), raising this variable alone won't help; you also need to raise (or auto-extend via progress) the client's timeout.
-- `PERPLEXITY_PROGRESS_INTERVAL_SECS` (optional, default: `10`): How often (in seconds) to emit `notifications/progress` heartbeats during a tool call, when the caller's request included a `progressToken`. See [Progress heartbeats](#progress-heartbeats-for-long-running-tools) below.
-- `PERPLEXITY_INCOGNITO` (optional, default: `true`): Whether requests should use Perplexity's incognito mode.
-  Valid values: `true` or `false`
+### Checking the session
 
-### Discovering Available Models
+The binary has a `--check` flag that performs the warm-up and reads your remaining Pro quota. It prints one line and exits:
 
-Perplexity doesn't publish a stable model list in this server's code alone — the typed enums (`SearchModel`, `ReasonModel`, `ComputerModel` in `crates/perplexity-web-api/src/models.rs`) are a **snapshot** that goes stale as Perplexity ships new models. Two live sources let you check what's actually available on your account before using the `raw:` escape hatch:
-
-1. **Model config endpoint** (no login required): [`https://www.perplexity.ai/rest/models/config`](https://www.perplexity.ai/rest/models/config) — returns the full JSON list of every model Perplexity's frontend knows about, grouped by which mode(s) it's valid for (`ask`, `reason`/copilot, `computer`/agentic, etc.) along with its internal `preference` string (the exact value you pass to `raw:<preference>`). This is the authoritative source for "does model X exist" and "which family (ask vs reason vs computer) does it belong to" — cross-check against this before filing a bug report about a model returning `null`.
-2. **Rate limit / usage endpoint** (requires a logged-in browser session — Cloudflare blocks non-browser requests): [`https://www.perplexity.ai/rest/rate-limit/all`](https://www.perplexity.ai/rest/rate-limit/all) — returns your account's current quota status per feature (`remaining_pro`, `remaining_research`, `remaining_labs`, `remaining_agentic_research`, plus per-source monthly limits). Also exposed as the `perplexity_usage` MCP tool, but that tool call hits the same Cloudflare wall as any other non-browser client and will return an HTTP 403 unless you're proxying through a real browser session (see the code comment on `perplexity_usage` in `crates/perplexity-web-api-mcp/src/server.rs` for the current status of that limitation).
-
-To pull the config JSON from a terminal:
-
-```bash
-curl -s 'https://www.perplexity.ai/rest/models/config' | jq .
+```text
+ok remaining_pro=<n>        # exit 0: the session is accepted
+anonymous remaining_pro=0   # exit 1: Perplexity treats the session as anonymous (expired cookie, wrong name, missing header)
+error <message>             # exit 1: request failed
 ```
 
-If you find a model preference that isn't in the typed enums yet, either (a) use it immediately via `raw:<preference>` — no recompile needed — or (b) open a PR adding it to `models.rs` so it gets schema validation and shows up in tool descriptions.
+Example for a launcher script:
 
-### Progress Heartbeats for Long-Running Tools
+```bash
+export PERPLEXITY_SESSION_TOKEN="..."
+export PERPLEXITY_SESSION_COOKIE_NAME="__Secure-pplx.session.7ca5..."
+perplexity-web-api-mcp --check || { echo "Perplexity session is not valid" >&2; exit 1; }
+exec perplexity-web-api-mcp
+```
 
-`perplexity_research`, `perplexity_computer`, and `perplexity_document_review` (and, less commonly, `perplexity_reason` on a heavy query) can legitimately hold Perplexity's SSE connection open for **minutes** with no intermediate bytes — this looks identical to a hung request from an MCP client's point of view.
+### Environment variables
 
-Per the [MCP Lifecycle spec's Timeouts section](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle#timeouts), a client **MAY** reset its own per-request timeout clock every time it receives a `notifications/progress` message tied to that request's `progressToken` — but the spec doesn't let a *server* force this; it's entirely a client-side opt-in (`resetTimeoutOnProgress` in the TypeScript SDK, or equivalent in other clients). A `SHOULD`-level absolute maximum timeout still applies on top, regardless of progress notifications, so this cannot make a request run forever.
+Authentication:
 
-This server implements the server side of that contract:
+- `PERPLEXITY_SESSION_TOKEN` (optional): Value of the session cookie. Required for `perplexity_research`, `perplexity_reason`, `perplexity_computer`, `perplexity_study`, `perplexity_document_review`, `perplexity_usage`, `perplexity_view_chat`, connectors, model selection, and file attachments. Omit it for [tokenless mode](#tokenless-mode).
+- `PERPLEXITY_SESSION_COOKIE_NAME` (optional, recommended): Full name of the session cookie, for example `__Secure-pplx.session.7ca5...`. The account UUID for the `x-pplx-account` header is taken from the part after `__Secure-pplx.session.`. If unset, the legacy NextAuth cookie name (`next-auth.session-token`) is used and no account header is sent; this only works for accounts that are still on the old scheme.
+- `PERPLEXITY_ACCOUNT_ID` (optional): Overrides the account UUID derived from the cookie name.
+- `PERPLEXITY_NO_ACCOUNT_HEADER` (optional): Set to any value to disable the `x-pplx-account` header. The client then falls back to the legacy NextAuth flow, including the `/api/auth/csrf` request. Intended for debugging.
+- `PERPLEXITY_DEBUG_COOKIES` (optional): Set to `1` to print the cookie jar, the account header, and the warm-up response to stderr. The output contains your session secrets; do not share it unredacted.
 
-- If (and only if) the caller's `tools/call` request includes `_meta.progressToken`, a background task sends a `notifications/progress` message every `PERPLEXITY_PROGRESS_INTERVAL_SECS` (default 10s) for the duration of the call.
-- `progress` is a monotonically increasing tick counter — Perplexity's streaming search API doesn't expose a real percent-complete signal, and the spec only requires `progress` to increase, not to mean anything specific. `message` explains this in plain English for clients that surface it to a human ("Still working — Perplexity request in flight, no timeout yet.").
-- The heartbeat is a `tokio` task tied to the tool call's lifetime: it's spawned right before the underlying HTTP request and aborted on drop, whichever way the call ends (success, error, or client cancellation).
-- No `progressToken` in the request → **zero overhead**, no task is spawned.
+Models (all require a token):
 
-**This does not replace `PERPLEXITY_LONG_TIMEOUT_SECS`** — that variable still governs how long this server's own HTTP client will wait for Perplexity's API before giving up. The two settings solve different halves of the same problem: `PERPLEXITY_LONG_TIMEOUT_SECS` controls how long *this server* is willing to wait, and the progress heartbeat controls how long *your MCP client* is willing to wait, provided your client supports `resetTimeoutOnProgress` (or equivalent) and actually sends a `progressToken`. Many MCP clients (including some simple stdio wrappers) don't set a `progressToken` at all, in which case only the client's static configured timeout applies and you'll need to raise that directly in your client's config.
+- `PERPLEXITY_ASK_MODEL`: Model for `perplexity_ask`. Default `pro-auto`.
+  Valid values: `turbo`, `pro-auto`, `pro-upgraded`, `sonar`, `nemotron-3-super`, `claude-4.6-sonnet`, `claude-4.6-opus`, `gemini-3.0-flash`, `gemini-3.0-pro`, `gpt-5-pro`, `gpt-5.3-codex`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.2`, `gpt-5.2-pro`, `grok-4.1`.
+- `PERPLEXITY_REASON_MODEL`: Model for `perplexity_reason`. Default `gemini-3.1-pro`.
+  Valid values: `gemini-3.1-pro`, `gemini-3.0-flash-high`, `claude-4.6-sonnet-thinking`, `claude-4.6-opus-thinking`, `gpt-5-thinking`, `gpt-5.1-thinking`, `gpt-5.2-thinking`, `gpt-5.4-thinking`, `grok-4.1-reasoning`, `kimi-k2.5-thinking`.
+- `PERPLEXITY_COMPUTER_MODEL`: Model for `perplexity_computer`. Default `claude-4.6-opus-thinking`.
+  Valid values: `asi`, `asi-beta`, `claude-4.6-sonnet`, `claude-4.6-sonnet-thinking`, `claude-4.6-opus`, `claude-4.6-opus-thinking`, `gpt-5.4`, `kimi`, `qwen`.
+- `raw:` escape hatch: each of the three model variables also accepts `raw:<preference>` to pass an arbitrary Perplexity preference string through unchanged, for models newer than this build's list (for example `PERPLEXITY_REASON_MODEL=raw:glm_5_2`). Each tool only accepts preferences from its own family: an "ask" model in `PERPLEXITY_ASK_MODEL`, a "reasoning" model in `PERPLEXITY_REASON_MODEL`. A model from the wrong family does not produce an error; Perplexity accepts the request and returns `answer: null`. If a tool starts returning `null` after a model change, check the family first (see [Discovering available models](#discovering-available-models)).
+
+Timeouts and progress:
+
+- `PERPLEXITY_TIMEOUT_SECS` (default `30`): Request timeout for fast modes (search, ask, reason, study).
+- `PERPLEXITY_LONG_TIMEOUT_SECS` (default `600`): Request timeout for long-running modes (Deep Research, Computer, Document Review). Raise it if deep-research runs are cut off. This timeout lives inside this server's HTTP client only; your MCP client has its own tool-call timeout (see [Progress heartbeats](#progress-heartbeats-for-long-running-tools)).
+- `PERPLEXITY_PROGRESS_INTERVAL_SECS` (default `10`): Interval for `notifications/progress` heartbeats during a tool call, sent only when the client's request included a `progressToken`.
+- `PERPLEXITY_INCOGNITO` (default `true`): Whether requests use Perplexity's incognito mode (`true` or `false`).
+
+### What changed in v0.13.0
+
+- Cookie name: `__Secure-pplx.session.<account-uuid>` replaces `__Secure-next-auth.session-token`. Set it with `PERPLEXITY_SESSION_COOKIE_NAME`.
+- Account header: every request carries `x-pplx-account: <account-uuid>`. Perplexity supports several signed-in accounts at once, one cookie each, and without the header the backend answers anonymously with HTTP 200 instead of returning an error.
+- CSRF: `/api/auth/csrf` no longer returns JSON for accounts on the new scheme. The request is skipped whenever the account header is in use.
+- `--check` flag and `PERPLEXITY_DEBUG_COOKIES` for diagnosis.
+
+Full history is in [CHANGELOG.md](CHANGELOG.md).
+
+### Discovering available models
+
+The typed model lists above (`SearchModel`, `ReasonModel`, `ComputerModel` in `crates/perplexity-web-api/src/models.rs`) are a snapshot and go stale as Perplexity ships new models. Two live sources show what your account can use before you reach for `raw:`:
+
+1. Model config endpoint (no login required): [`https://www.perplexity.ai/rest/models/config`](https://www.perplexity.ai/rest/models/config) returns every model the Perplexity frontend knows about, grouped by the mode it is valid for (`ask`, `reason`/copilot, `computer`/agentic, and so on), with its internal `preference` string. That string is the value you pass to `raw:<preference>`, and the grouping tells you which family a model belongs to.
+
+   ```bash
+   curl -s 'https://www.perplexity.ai/rest/models/config' | jq .
+   ```
+
+2. Rate limit endpoint (requires a logged-in session): [`https://www.perplexity.ai/rest/rate-limit/all`](https://www.perplexity.ai/rest/rate-limit/all) returns your remaining quotas per feature. The same data is exposed by the `perplexity_usage` tool and by `--check`.
+
+If you find a model that is missing from the typed lists, use it right away via `raw:<preference>`, or open a pull request adding it to `models.rs` so it gets validation and shows up in the tool descriptions.
+
+### Progress heartbeats for long-running tools
+
+`perplexity_research`, `perplexity_computer`, and `perplexity_document_review` (and occasionally `perplexity_reason` on a heavy query) can hold Perplexity's SSE connection open for minutes without sending any bytes. From an MCP client's point of view this looks like a hung request.
+
+The [MCP lifecycle spec](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle#timeouts) allows a client to reset its per-request timeout every time it receives a `notifications/progress` message for that request's `progressToken`. This is a client-side opt-in (`resetTimeoutOnProgress` in the TypeScript SDK, or the equivalent in other clients); a server cannot force it, and clients may still apply an absolute maximum.
+
+This server implements the server side:
+
+- If, and only if, the `tools/call` request includes `_meta.progressToken`, a background task sends `notifications/progress` every `PERPLEXITY_PROGRESS_INTERVAL_SECS` (default 10 s) for the duration of the call.
+- `progress` is a monotonically increasing tick counter. Perplexity's streaming API exposes no percent-complete signal, and the spec only requires the value to increase. The `message` field says so in plain English for clients that show it.
+- The heartbeat task is tied to the tool call and aborted when the call ends, whether by success, error, or cancellation.
+- Without a `progressToken` no task is spawned.
+
+`PERPLEXITY_LONG_TIMEOUT_SECS` still governs how long this server waits for Perplexity. The heartbeat governs how long your MCP client waits, provided the client supports timeout reset on progress and sends a `progressToken`. Many clients, including simple stdio wrappers, do not; in that case raise the client's own timeout setting.
+
+## Client setup
+
+All examples assume the binary is on your `PATH`. If it is not, replace `perplexity-web-api-mcp` with the absolute path, for example `/Users/you/.cargo/bin/perplexity-web-api-mcp`.
 
 ### Claude Code
 
 ```bash
-claude mcp add perplexity --env PERPLEXITY_SESSION_TOKEN="your-session-token" -- npx -y @antonlx/perplexity-web-api-mcp
+claude mcp add perplexity \
+  --env PERPLEXITY_SESSION_TOKEN="your-cookie-value" \
+  --env PERPLEXITY_SESSION_COOKIE_NAME="__Secure-pplx.session.your-account-uuid" \
+  -- perplexity-web-api-mcp
 ```
 
-### Cursor, Claude Desktop & Windsurf
+### Codex
 
-I recommend using the one-click install badge at the top of this README for Cursor.
+```bash
+codex mcp add perplexity \
+  --env PERPLEXITY_SESSION_TOKEN="your-cookie-value" \
+  --env PERPLEXITY_SESSION_COOKIE_NAME="__Secure-pplx.session.your-account-uuid" \
+  -- perplexity-web-api-mcp
+```
 
-For manual setup, all these clients use the same `mcpServers` format:
+### Cursor, Claude Desktop, Windsurf
 
-| Client | Config File |
+These clients share the `mcpServers` format:
+
+| Client | Config file |
 |--------|-------------|
 | Cursor | `~/.cursor/mcp.json` |
 | Claude Desktop | `claude_desktop_config.json` |
@@ -148,10 +195,10 @@ For manual setup, all these clients use the same `mcpServers` format:
 {
   "mcpServers": {
     "perplexity": {
-      "command": "npx",
-      "args": ["-y", "@antonlx/perplexity-web-api-mcp"],
+      "command": "perplexity-web-api-mcp",
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "your-session-token"
+        "PERPLEXITY_SESSION_TOKEN": "your-cookie-value",
+        "PERPLEXITY_SESSION_COOKIE_NAME": "__Secure-pplx.session.your-account-uuid"
       }
     }
   }
@@ -160,16 +207,16 @@ For manual setup, all these clients use the same `mcpServers` format:
 
 ### Zed
 
-Add following following to `context_servers` in your [settings file](https://zed.dev/docs/configuring-zed.html#settings-files):
+Add the following to `context_servers` in your [settings file](https://zed.dev/docs/configuring-zed.html#settings-files):
 
 ```json
 {
   "context_servers": {
     "perplexity": {
-      "command": "npx",
-      "args": ["-y", "@antonlx/perplexity-web-api-mcp"],
+      "command": "perplexity-web-api-mcp",
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "your-session-token"
+        "PERPLEXITY_SESSION_TOKEN": "your-cookie-value",
+        "PERPLEXITY_SESSION_COOKIE_NAME": "__Secure-pplx.session.your-account-uuid"
       }
     }
   }
@@ -178,54 +225,52 @@ Add following following to `context_servers` in your [settings file](https://zed
 
 ### VS Code
 
-I recommend using the one-click install badge at the top of this README for VS Code, or for manual setup, add to `.vscode/mcp.json`:
+Add to `.vscode/mcp.json`:
 
 ```json
 {
   "servers": {
     "perplexity": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@antonlx/perplexity-web-api-mcp"],
+      "command": "perplexity-web-api-mcp",
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "your-session-token"
+        "PERPLEXITY_SESSION_TOKEN": "your-cookie-value",
+        "PERPLEXITY_SESSION_COOKIE_NAME": "__Secure-pplx.session.your-account-uuid"
       }
     }
   }
 }
 ```
 
-### Codex
+### Other MCP clients
 
-```bash
-codex mcp add perplexity --env PERPLEXITY_SESSION_TOKEN="your-session-token" -- npx -y @antonlx/perplexity-web-api-mcp
-```
+Most clients accept the `mcpServers` layout shown for Cursor. If yours does not, check its documentation for the stdio server format.
 
-### Building from Source
+## Tokenless mode
 
-Source build instructions, including optional cargo features, are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
+The server runs without a session cookie when `PERPLEXITY_SESSION_TOKEN` is unset. In this mode:
 
-### Other MCP Clients
-
-Most clients can be manually configured to use the `mcpServers` wrapper in their configuration file (like Cursor). If your client doesn't work, check its documentation for the correct wrapper format.
+- Only `perplexity_search` (links only) and `perplexity_ask` (answer with sources) are registered.
+- Both use the `turbo` model. Setting `PERPLEXITY_ASK_MODEL`, `PERPLEXITY_REASON_MODEL`, or `PERPLEXITY_COMPUTER_MODEL` is an error.
+- File attachments and connectors are unavailable.
 
 ## Docker
 
-Build the fork's image locally:
+The image is built locally and serves the MCP over Streamable HTTP:
 
 ```bash
 docker build -t perplexity-web-api-mcp .
 
 docker run -d \
   -p 8080:8080 \
-  -e PERPLEXITY_SESSION_TOKEN="your-session-token" \
+  -e PERPLEXITY_SESSION_TOKEN="your-cookie-value" \
+  -e PERPLEXITY_SESSION_COOKIE_NAME="__Secure-pplx.session.your-account-uuid" \
   perplexity-web-api-mcp
 ```
 
-The container exposes the MCP server via Streamable HTTP at `http://localhost:8080/mcp`.
-The Docker image is built with `--features streamable-http`; local/source builds need the same feature if you want HTTP transport.
+The server listens at `http://localhost:8080/mcp`. The image is built with `--features streamable-http`; source builds need the same feature for HTTP transport.
 
-Configure your MCP client to connect:
+Client configuration:
 
 ```json
 {
@@ -237,85 +282,92 @@ Configure your MCP client to connect:
 }
 ```
 
-### Environment Variables (Docker-specific)
+Docker-specific variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCP_TRANSPORT` | `streamable-http` | Transport mode. `stdio` or `streamable-http` (requires the `streamable-http` cargo feature) |
-| `MCP_HOST` | `0.0.0.0` | Host address to bind |
+| `MCP_TRANSPORT` | `streamable-http` | `stdio` or `streamable-http` (the latter requires the `streamable-http` cargo feature) |
+| `MCP_HOST` | `0.0.0.0` | Address to bind |
 | `MCP_PORT` | `8080` | Port to listen on |
 
-The [authentication token, model variables, and incognito flag](#configuration) described above work the same way in Docker.
+The authentication, model, timeout, and incognito variables described in [Configuration](#configuration) apply unchanged.
 
-## Available Tools
+## Available tools
 
 ### `perplexity_search`
 
-Quick web search using the `turbo` model. Returns only links, titles, and snippets — no generated answer.
+Web search with the `turbo` model. Returns links, titles, and snippets only, no generated answer. Works without a token.
 
-**Best for:** Finding relevant URLs and sources quickly.
+Parameters:
 
-**Parameters:**
+- `query` (required): The search query.
+- `sources` (optional): Array of sources. Standard: `"web"`, `"scholar"`, `"social"`. Connectors (token and connected account required): `"google_drive"`, `"gcal"` / `"google_calendar"`, `"outlook"`, `"github_mcp_direct"` / `"github"`, `"hugging_face"` / `"huggingface"`, `"notion_mcp"` / `"notion"`, `"linear_alt"` / `"linear"`, `"slack_direct"` / `"slack"`, `"jira_mcp_merge"` / `"jira"`, `"confluence_mcp_merge"` / `"confluence"`, `"microsoft_teams_mcp_merge"` / `"teams"`, `"onedrive"`, `"sharepoint"`, `"dropbox"`, `"box"`. Unknown connector IDs are passed through unchanged. Defaults to `["web"]`.
+- `language` (optional): Language code such as `"en-US"` (default).
 
-- `query` (required): The search query or question
-- `sources` (optional): Array of sources — `"web"`, `"scholar"`, `"social"`, plus connectors like
-  `"google_drive"`, `"gcal"` / `"google_calendar"`, `"github_mcp_direct"` / `"github"`,
-  `"hugging_face"` / `"huggingface"`, `"notion_mcp"` / `"notion"`, `"linear_alt"` / `"linear"`,
-  `"slack_direct"` / `"slack"`, `"jira_mcp_merge"` / `"jira"`, `"confluence_mcp_merge"` / `"confluence"`,
-  `"microsoft_teams_mcp_merge"` / `"teams"`, `"onedrive"`, `"sharepoint"`, `"dropbox"`, `"box"`.
-  Unknown connector IDs are passed through unchanged. Defaults to `["web"]`
-- `language` (optional): Language code, e.g., `"en-US"`. Defaults to `"en-US"`
-
-> File attachments are not supported by this tool.
+File attachments are not supported by this tool.
 
 ### `perplexity_ask`
 
-Ask Perplexity AI a question and get a comprehensive answer with source citations. By default uses the best model (Pro auto mode) when authenticated, or `turbo` in tokenless mode. Can be configured via `PERPLEXITY_ASK_MODEL`.
+Answers a question with source citations. Uses `pro-auto` when authenticated (configurable via `PERPLEXITY_ASK_MODEL`), `turbo` in tokenless mode.
 
-**Best for:** Getting detailed answers to questions with web context.
-
-**Parameters:** Same as `perplexity_search`, plus:
-
-- `files` (optional, requires token): Array of file attachments for document analysis. See [File Attachments](#file-attachments).
+Parameters: same as `perplexity_search`, plus `files` (optional, requires token), see [File attachments](#file-attachments).
 
 ### `perplexity_reason`
 
-Advanced reasoning and problem-solving. By default uses Perplexity's `sonar-reasoning` model, but can be configured via `PERPLEXITY_REASON_MODEL`.
+Step-by-step reasoning with web grounding. Uses `gemini-3.1-pro` by default, configurable via `PERPLEXITY_REASON_MODEL`. Requires a token.
 
-**Best for:** Logical problems, complex analysis, decision-making, and tasks requiring step-by-step reasoning.
-
-**Parameters:** Same as `perplexity_ask`.
+Parameters: same as `perplexity_ask`.
 
 ### `perplexity_research`
 
-Deep, comprehensive research using Perplexity's sonar-deep-research (`pplx_alpha`) model.
+Deep, multi-source research using Perplexity's deep research mode (`pplx_alpha`). Slow (often more than 60 seconds). Requires a token.
 
-**Best for:** Complex topics requiring detailed investigation, comprehensive reports, and in-depth analysis. Provides thorough analysis with citations.
+Parameters: same as `perplexity_ask`.
 
-**Parameters:** Same as `perplexity_ask`.
+### `perplexity_computer`
+
+Runs a task with Perplexity Computer, the agentic mode that can browse, run code, and use connected services. Uses `claude-4.6-opus-thinking` by default, configurable via `PERPLEXITY_COMPUTER_MODEL`. Requires a token.
+
+Parameters: same as `perplexity_ask`.
+
+### `perplexity_study`
+
+Tutor-style explanations in Perplexity's study mode. Requires a token.
+
+Parameters: same as `perplexity_ask`.
+
+### `perplexity_document_review`
+
+Detailed analysis of uploaded documents in Perplexity's document review mode. Attach the documents via `files`. Requires a token.
+
+Parameters: same as `perplexity_ask`.
+
+### `perplexity_usage`
+
+Returns your account's remaining quotas from `/rest/rate-limit/all`: Pro Search (weekly), Deep Research (monthly), Create Files & Apps, Browser Agent / Computer, plus per-source monthly limits. Requires a token. Useful when a request comes back empty and you want to rule out an exhausted quota.
+
+The server also checks the relevant quota before each metered request and returns a clear error when it is exhausted, instead of the empty answer Perplexity would otherwise produce.
 
 ### `perplexity_view_chat`
 
-Loads the context of an existing Perplexity search/chat and asks Perplexity to extract or summarize it.
+Reads an existing Perplexity thread directly through the REST API and returns its content. Nothing is posted to the thread. Requires a token.
 
-**Parameters:**
+Parameters:
 
-- `url_or_id` (required): Full `perplexity.ai/search/...` URL, thread UUID, or thread slug
-- `query` (optional): A specific question about the thread. By default, returns a detailed question-by-question breakdown
+- `url_or_id` (required): Full `perplexity.ai/search/...` or `/computer/tasks/...` URL, thread UUID, or thread slug.
+- `query` (optional): Accepted for compatibility; the thread content is returned as is.
 
-Requires `PERPLEXITY_SESSION_TOKEN`. Internally this uses Perplexity's follow-up mechanism, so the inspection query may appear as a new turn in the referenced thread.
+## File attachments
 
-## File Attachments
+`perplexity_ask`, `perplexity_reason`, `perplexity_research`, `perplexity_computer`, `perplexity_study`, and `perplexity_document_review` accept an optional `files` array. Requires a token.
 
-`perplexity_ask`, `perplexity_research`, and `perplexity_reason` accept an optional `files` parameter for document analysis. **Requires authentication token.**
+Each entry needs:
 
-Each entry in the `files` array must have:
+- `filename` (required): Filename with extension, for example `"report.pdf"` or `"notes.txt"`.
+- `text` (mutually exclusive with `data`): Plain-text content, for `.txt`, `.md`, `.csv`, `.json`, source code, and so on.
+- `data` (mutually exclusive with `text`): Base64-encoded binary content, for `.pdf`, `.docx`, images, and so on.
 
-- `filename` (required): Filename with extension, e.g. `"report.pdf"` or `"notes.txt"`
-- `text` (mutually exclusive with `data`): Plain-text file content. Use for `.txt`, `.md`, `.csv`, `.json`, source code, etc.
-- `data` (mutually exclusive with `text`): Base64-encoded binary content. Use for `.pdf`, `.docx`, images, etc.
-
-**Example — plain text:**
+Plain text:
 
 ```json
 {
@@ -329,7 +381,7 @@ Each entry in the `files` array must have:
 }
 ```
 
-**Example — binary file (PDF):**
+Binary file:
 
 ```json
 {
@@ -343,11 +395,11 @@ Each entry in the `files` array must have:
 }
 ```
 
-Multiple files can be passed in a single request — they are uploaded to Perplexity's storage in parallel before the query is sent.
+Several files can be passed in one request. They are uploaded to Perplexity's storage in parallel before the query is sent.
 
-## Response Format
+## Response format
 
-`perplexity_search` returns only web results:
+`perplexity_search` returns web results only:
 
 ```json
 {
@@ -361,7 +413,7 @@ Multiple files can be passed in a single request — they are uploaded to Perple
 }
 ```
 
-`perplexity_ask`, `perplexity_research`, and `perplexity_reason` return a full response:
+The other query tools return the answer, the sources, and follow-up context:
 
 ```json
 {
@@ -380,6 +432,28 @@ Multiple files can be passed in a single request — they are uploaded to Perple
 }
 ```
 
+## Troubleshooting
+
+- Empty results, `answer: null`, or quotas that read as `0` right after setup: Perplexity is treating the session as anonymous. Run `perplexity-web-api-mcp --check` with the same environment. Check that `PERPLEXITY_SESSION_COOKIE_NAME` is the full cookie name including the UUID and that the cookie has not expired.
+- `Failed to fetch CSRF token`: the client is on the legacy NextAuth path. Set `PERPLEXITY_SESSION_COOKIE_NAME` so the account header is used and the CSRF request is skipped.
+- `null` answers after changing a model variable: the model belongs to the other family. See [Discovering available models](#discovering-available-models).
+- Deep research cut off: raise `PERPLEXITY_LONG_TIMEOUT_SECS` and the MCP client's own timeout. See [Progress heartbeats](#progress-heartbeats-for-long-running-tools).
+- For anything else, set `PERPLEXITY_DEBUG_COOKIES=1` and read stderr. Redact the output before sharing it.
+
+## Building from source
+
+Build instructions, including optional cargo features and Windows prerequisites, are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Contributing and security
+
+Bug reports and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Please never paste session cookies or `PERPLEXITY_DEBUG_COOKIES` output into an issue.
+
+Security issues go through the private reporting process described in [SECURITY.md](SECURITY.md), not through public issues.
+
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE). Copyright for the original code remains with the respective authors.
+
+## Maintainer
+
+Maintained by Dennis Hüttner, [Waterproof Web Wizard GmbH](https://waterproof-web-wizard.com/). Contributions are welcome; fixes that apply upstream will be offered to [AntonIXO](https://github.com/AntonIXO/perplexity-web-api-mcp).

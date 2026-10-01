@@ -261,6 +261,26 @@ code {
     color: var(--text-dim);
 }
 
+/* Notice */
+.notice {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 64px;
+}
+
+.notice h3 {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    color: #fff;
+}
+
+.notice p {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+}
+
 /* Footer */
 .footer {
     text-align: center;
@@ -268,6 +288,12 @@ code {
     font-size: 0.85rem;
     padding-top: 32px;
     border-top: 1px solid var(--border);
+}
+
+.footer-lineage {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.8rem;
 }
 
 .footer-link {

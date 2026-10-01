@@ -1,0 +1,114 @@
+name: Bug report
+description: Something does not work as documented
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste cookies, tokens, or account UUIDs anywhere in this report.**
+        That includes `PERPLEXITY_SESSION_TOKEN`, the full `__Secure-pplx.session.<uuid>` cookie name,
+        `PERPLEXITY_ACCOUNT_ID`, and unredacted `PERPLEXITY_DEBUG_COOKIES=1` output. A leaked cookie gives
+        full access to your Perplexity account. Replace secrets with `<redacted>` before submitting.
+
+        This project uses Perplexity's undocumented web endpoints. If Perplexity changed something, the
+        fastest way to help is a redacted `PERPLEXITY_DEBUG_COOKIES=1` stderr dump and the HTTP status codes you see.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release tag you installed (for example `v0.13.0`), or the commit hash if you built from source. The binary has no `--version` flag; MCP clients that show server info report the version there.
+      placeholder: v0.13.0
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and architecture
+      placeholder: macOS 15.5 arm64 / Ubuntu 24.04 x86_64 / Windows 11 x86_64
+    validations:
+      required: true
+
+  - type: input
+    id: client
+    attributes:
+      label: MCP client
+      description: Which client talks to the server, and its version if you know it.
+      placeholder: Claude Code 2.x / Codex / Cursor / VS Code / Zed / Docker (Streamable HTTP)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Affected tool
+      multiple: true
+      options:
+        - perplexity_search
+        - perplexity_ask
+        - perplexity_reason
+        - perplexity_research
+        - perplexity_computer
+        - perplexity_study
+        - perplexity_document_review
+        - perplexity_usage
+        - perplexity_view_chat
+        - Startup / configuration (no tool call reached)
+        - Installer
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: check
+    attributes:
+      label: Output of `perplexity-web-api-mcp --check`
+      description: Run it with the same environment variables your MCP client uses. Paste the one-line result and the exit code. Redact anything that looks like a token.
+      render: text
+      placeholder: |
+        ok remaining_pro=42
+        exit code 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: Which environment variables are set (names and non-secret values only). Model variables, timeouts, incognito, `PERPLEXITY_NO_ACCOUNT_HEADER`, and whether `PERPLEXITY_SESSION_COOKIE_NAME` is set are all relevant.
+      render: text
+      placeholder: |
+        PERPLEXITY_SESSION_TOKEN=<redacted>
+        PERPLEXITY_SESSION_COOKIE_NAME=__Secure-pplx.session.<redacted>
+        PERPLEXITY_REASON_MODEL=raw:...
+    validations:
+      required: false
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead. Include the tool call parameters if a tool call is involved.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant stderr output from the server or the MCP client's log. If you ran with `PERPLEXITY_DEBUG_COOKIES=1`, redact the cookie values and the account UUID first.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have checked that this report contains no cookies, tokens, or account UUIDs.
+          required: true
+        - label: I have read the Disclaimer and Troubleshooting sections of the README.
+          required: true

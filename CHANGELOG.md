@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0](https://github.com/dhuettner/perplexity-web-api-mcp/compare/v0.12.3..v0.13.0) - 2026-10-01
+
+First release from [dhuettner/perplexity-web-api-mcp](https://github.com/dhuettner/perplexity-web-api-mcp), based on AntonIXO v0.12.3.
+
+### 🐛 Bug Fixes
+
+- Authenticate against Perplexity's per-account session scheme: the session cookie is now `__Secure-pplx.session.<account-uuid>` and every request carries the `x-pplx-account` header. Without it Perplexity silently answers as an anonymous user.
+- Skip the NextAuth `/api/auth/csrf` request when the account header is in use; the endpoint no longer returns JSON.
+- `perplexity_view_chat` sends the account header too, so private threads are read as the logged-in user; its tool description no longer claims a follow-up turn is added.
+
+### 🚀 Features
+
+- `PERPLEXITY_SESSION_COOKIE_NAME` sets the session cookie name; the account id for the header is derived from it.
+- `PERPLEXITY_NO_ACCOUNT_HEADER` disables the account header, `PERPLEXITY_DEBUG_COOKIES=1` prints the cookie jar and warm-up response for diagnosis.
+- `--check` flag: prints the remaining Pro quota and exits non-zero when the session is anonymous or invalid.
+
+### ⚙️ Miscellaneous Tasks
+
+- Release binaries and shell/PowerShell installers are published from this repository; the npm package is no longer built.
+
 ## [0.12.3](https://github.com/AntonIXO/perplexity-web-api-mcp/compare/v0.12.2..v0.12.3) - 2026-08-17
 
 ### 🚀 Features

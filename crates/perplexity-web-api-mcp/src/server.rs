@@ -654,7 +654,7 @@ impl PerplexityServer {
         description = "View, extract, or summarize the contents of a Perplexity chat / search link or thread. \
                 Pass a Perplexity search link (e.g., 'https://www.perplexity.ai/search/3b060972-a099-4264-b392-096fb2a3bdf9') \
                 or thread UUID/slug, and optionally a specific question about the thread. \
-                Uses Perplexity's follow-up mechanism, so the query may appear as a new turn in that thread. \
+                Reads the thread directly via Perplexity's REST API; nothing is added to the thread. \
                 Requires authentication tokens (PERPLEXITY_SESSION_TOKEN).",
         annotations(
             title = "View Perplexity Chat",
@@ -680,7 +680,10 @@ impl PerplexityServer {
         let _heartbeat = ProgressHeartbeat::start(&context, self.progress_interval);
 
         let response = self.client.read_thread(&uuid_or_slug).await.map_err(|e| {
-            McpError::internal_error(format!("Perplexity API error reading thread content: {}", e), None)
+            McpError::internal_error(
+                format!("Perplexity API error reading thread content: {}", e),
+                None,
+            )
         })?;
 
         to_json_tool_result(&PerplexityResponse {

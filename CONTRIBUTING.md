@@ -1,12 +1,14 @@
 # Contributing Guide
 
-Thank you for your interest in contributing to Perplexity Web API MCP Server! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to the Perplexity Web API MCP Server. This document covers how to build the project, what checks to run, and how to submit changes.
+
+This repository is maintained by Dennis Hüttner (Waterproof Web Wizard GmbH). It descends from the fork by [AntonIXO](https://github.com/AntonIXO/perplexity-web-api-mcp) and the original project by [mishamyrt](https://github.com/mishamyrt/perplexity-web-api-mcp). Fixes that also apply upstream will be offered to AntonIXO; if you want your change to go upstream too, say so in the pull request.
 
 ## Requirements
 
 - **Rust 1.91+** (edition 2024)
 - **Cargo** (comes with Rust)
-- A Perplexity AI account (for testing)
+- A Perplexity AI account (for manual testing against the live API)
 
 ## Getting Started
 
@@ -42,7 +44,7 @@ Building on Windows requires additional tools because this project depends on Bo
 
 **Using the build script:**
 
-The included `build.ps1` script automatically downloads and sets up all required build tools into a local `.build-tools` directory:
+The included `build.ps1` script downloads and sets up the required build tools into a local `.build-tools` directory:
 
 ```powershell
 # First build (downloads dependencies automatically)
@@ -63,6 +65,18 @@ powershell -ExecutionPolicy Bypass -File build.ps1 -Clean
 cargo test --workspace
 ```
 
+### 4. Check a Live Session
+
+Set the two authentication variables and run the health probe:
+
+```bash
+export PERPLEXITY_SESSION_TOKEN="your-cookie-value"
+export PERPLEXITY_SESSION_COOKIE_NAME="__Secure-pplx.session.your-account-uuid"
+cargo run --bin perplexity-web-api-mcp -- --check
+```
+
+`ok remaining_pro=<n>` means the session is accepted. See the README for what the other outputs mean.
+
 ## Project Structure
 
 ```
@@ -70,18 +84,23 @@ perplexity-web-api-mcp/
 ├── crates/
 │   ├── perplexity-web-api/       # Core API client library
 │   │   ├── src/
-│   │   │   ├── client.rs         # HTTP client and request handling
+│   │   │   ├── auth.rs           # Session cookie handling
+│   │   │   ├── client.rs         # HTTP client, account header, request handling
 │   │   │   ├── config.rs         # API configuration constants
 │   │   │   ├── error.rs          # Error types
+│   │   │   ├── models.rs         # Typed model lists
 │   │   │   ├── parse.rs          # Response parsing
+│   │   │   ├── rate_limit.rs     # Quota / rate-limit types
 │   │   │   ├── sse.rs            # Server-Sent Events stream handling
 │   │   │   ├── types.rs          # Request/response types
 │   │   │   └── upload.rs         # File upload functionality
-│   │   └── examples/             # Usage examples
+│   │   ├── examples/             # Usage examples
+│   │   └── tests/                # Integration tests
 │   └── perplexity-web-api-mcp/   # MCP server binary
 │       └── src/
-│           ├── main.rs           # Entry point
+│           ├── main.rs           # Entry point, env parsing, --check
 │           └── server.rs         # MCP tool implementations
+├── docs/                         # GitHub Pages landing page
 ├── Cargo.toml                    # Workspace configuration
 └── AGENTS.md                     # AI agent guidelines
 ```
@@ -102,7 +121,7 @@ new-dep = { workspace = true, features = ["feature-name"] }
 
 ### Async Rust Best Practices
 
-This project uses **Tokio** for async runtime. Follow these guidelines:
+This project uses **Tokio** for the async runtime. Follow these guidelines:
 
 - **Never block the runtime**: avoid `std::thread::sleep`, blocking IO, or heavy CPU work on async tasks
   - Use `tokio::task::spawn_blocking` if blocking is unavoidable
@@ -117,14 +136,14 @@ This project uses **Tokio** for async runtime. Follow these guidelines:
 - Use structured errors with `thiserror`
 - Include actionable context in error messages
 - Preserve error sources with `#[source]` for debugging
-- Never leak secrets (API keys, cookies, tokens) in error messages or logs
+- Never leak secrets (session cookies, tokens, account IDs) in error messages or logs. Debug output that has to contain them belongs behind `PERPLEXITY_DEBUG_COOKIES` and goes to stderr.
 
 ### Code Style
 
 - Match existing patterns in each module
 - Prefer small, testable functions
 - Document public APIs with doc comments
-- Update examples when API behavior changes
+- Update the README and examples when behavior or configuration changes
 
 ## Before Submitting
 
@@ -141,66 +160,80 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 # Build all targets
 cargo build --workspace --all-targets
+
+# Run tests
+cargo test --workspace
 ```
 
 ### Commit Messages
 
-- Use clear, descriptive commit messages
-- Start with a verb in imperative mood: "Add", "Fix", "Update", "Remove"
-- Keep the first line under 72 characters
-- Reference issues when applicable: "Fix #123"
+The changelog is generated with git-cliff from [Conventional Commits](https://www.conventionalcommits.org/), so the prefix decides where a change shows up:
+
+- `feat:` new functionality
+- `fix:` bug fixes
+- `docs:` documentation only
+- `refactor:` code changes without behavior change
+- `perf:` performance improvements
+- `chore:`, `test:`, `ci:` are not listed in the changelog
+
+Keep the first line under 72 characters and reference issues when applicable ("Fixes #123").
 
 Examples:
 ```
-Add timeout configuration to ClientBuilder
-Fix SSE stream parsing for malformed events
-Update error types for better diagnostics
+feat: add timeout configuration to ClientBuilder
+fix: parse SSE stream for malformed events
+docs: describe the --check flag
 ```
 
 ## Pull Request Process
 
-1. **Create a feature branch** from `master`:
+1. **Create a branch** from the default branch:
    ```bash
-   git checkout -b feature/your-feature-name
+   git checkout -b fix/your-change
    ```
 
 2. **Make your changes** following the guidelines above
 
-3. **Run all checks** to ensure code quality
+3. **Run all checks** listed under Required Checks
 
-4. **Push and create a PR** with a clear description:
-   - What changes were made
-   - Why the changes are needed
-   - How to test the changes
+4. **Push and open a pull request**. The template asks for:
+   - What changed and why
+   - How you tested it (including `--check` or a tool call against the live API, if relevant)
+   - Confirmation that no cookies, tokens, or account IDs are in the diff or the description
 
-5. **Address review feedback** promptly
+5. **Address review feedback**
 
 ## Testing
 
 ### Running Examples
 
-Examples require authentication tokens. Set environment variables:
+Examples that talk to the live API need a session:
 
 ```bash
-export PERPLEXITY_SESSION_TOKEN="your-session-token"
+export PERPLEXITY_SESSION_TOKEN="your-cookie-value"
+export PERPLEXITY_SESSION_COOKIE_NAME="__Secure-pplx.session.your-account-uuid"
 ```
 
-Then run:
+Then run, for example:
 
 ```bash
-cargo run --example basic
-cargo run --example streaming
+cargo run -p perplexity-web-api --example basic
+cargo run -p perplexity-web-api --example streaming
+cargo run -p perplexity-web-api --example with_cookies
+cargo run -p perplexity-web-api --example with_file
 ```
 
 ### Adding Tests
 
 - Add unit tests in the same file as the code being tested
-- Add integration tests in `tests/` directory if needed
-- Ensure tests are deterministic and don't require external services
+- Add integration tests in `crates/perplexity-web-api/tests/` if needed
+- Ensure tests are deterministic and do not require external services
 
-## Questions?
+## Reporting Bugs
 
-If you have questions or need help, feel free to open an issue for discussion.
+Use the bug report template in this repository's issue tracker. It asks for the version, operating system, MCP client, and the output of `--check`. Never paste cookies, tokens, or unredacted `PERPLEXITY_DEBUG_COOKIES` output into an issue.
+
+Security problems go through private vulnerability reporting, not the public tracker; see [SECURITY.md](SECURITY.md).
 
 ## License
 

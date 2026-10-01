@@ -5,10 +5,10 @@ resolver = "2"
 [workspace.package]
 edition = "2024"
 rust-version = "1.91"
-homepage = "https://github.com/AntonIXO/perplexity-web-api-mcp"
-documentation = "https://github.com/AntonIXO/perplexity-web-api-mcp"
-repository = "https://github.com/AntonIXO/perplexity-web-api-mcp"
-authors = ["Mikhael Khrustik <misha@myrt.co>"]
+homepage = "https://github.com/dhuettner/perplexity-web-api-mcp"
+documentation = "https://github.com/dhuettner/perplexity-web-api-mcp"
+repository = "https://github.com/dhuettner/perplexity-web-api-mcp"
+authors = ["Mikhael Khrustik <misha@myrt.co>", "Dennis Hüttner <dh@waterproof-web-wizard.com>"]
 keywords = ["perplexity", "mcp", "ai", "search"]
 license = "MIT"
 
