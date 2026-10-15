@@ -6,7 +6,7 @@
 # See documentation for more information on available options.
 
 [remote.github]
-owner = "dhuettner"
+owner = "Waterproof-Web-Wizard-GmbH"
 repo = "perplexity-web-api-mcp"
 
 [changelog]

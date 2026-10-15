@@ -6,7 +6,7 @@ Thank you for helping keep perplexity-web-api-mcp secure.
 
 Report security issues privately through GitHub's private vulnerability reporting for this repository: open the repository's **Security** tab and choose **Report a vulnerability**, or use this link:
 
-https://github.com/dhuettner/perplexity-web-api-mcp/security/advisories/new
+https://github.com/Waterproof-Web-Wizard-GmbH/perplexity-web-api-mcp/security/advisories/new
 
 Please **do not** report security vulnerabilities through public issues, pull requests, or other public channels.
 

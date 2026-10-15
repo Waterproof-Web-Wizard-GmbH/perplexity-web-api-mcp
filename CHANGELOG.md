@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.13.0](https://github.com/dhuettner/perplexity-web-api-mcp/compare/v0.12.3..v0.13.0) - 2026-10-01
+## [0.13.0](https://github.com/Waterproof-Web-Wizard-GmbH/perplexity-web-api-mcp/compare/v0.12.3..v0.13.0) - 2026-10-01
 
-First release from [dhuettner/perplexity-web-api-mcp](https://github.com/dhuettner/perplexity-web-api-mcp), based on AntonIXO v0.12.3.
+First release from [dhuettner/perplexity-web-api-mcp](https://github.com/Waterproof-Web-Wizard-GmbH/perplexity-web-api-mcp), based on AntonIXO v0.12.3.
 
 ### 🐛 Bug Fixes
 

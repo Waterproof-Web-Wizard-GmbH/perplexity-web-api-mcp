@@ -37,24 +37,24 @@ Other platforms can build from source (see [Building from source](#building-from
 macOS and Linux:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/dhuettner/perplexity-web-api-mcp/releases/latest/download/perplexity-web-api-mcp-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Waterproof-Web-Wizard-GmbH/perplexity-web-api-mcp/releases/latest/download/perplexity-web-api-mcp-installer.sh | sh
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://github.com/dhuettner/perplexity-web-api-mcp/releases/latest/download/perplexity-web-api-mcp-installer.ps1 | iex
+irm https://github.com/Waterproof-Web-Wizard-GmbH/perplexity-web-api-mcp/releases/latest/download/perplexity-web-api-mcp-installer.ps1 | iex
 ```
 
 The installer places the binary in `~/.cargo/bin/perplexity-web-api-mcp` (`%USERPROFILE%\.cargo\bin` on Windows). Make sure that directory is on your `PATH`, or use the absolute path in your MCP client configuration.
 
 ### Other options
 
-- Platform archives and `.sha256` checksum files are on the [Releases page](https://github.com/dhuettner/perplexity-web-api-mcp/releases/latest).
+- Platform archives and `.sha256` checksum files are on the [Releases page](https://github.com/Waterproof-Web-Wizard-GmbH/perplexity-web-api-mcp/releases/latest).
 - Build and install with Cargo (Rust 1.91 or newer):
 
   ```bash
-  cargo install --git https://github.com/dhuettner/perplexity-web-api-mcp perplexity-web-api-mcp
+  cargo install --git https://github.com/Waterproof-Web-Wizard-GmbH/perplexity-web-api-mcp perplexity-web-api-mcp
   ```
 
   Windows builds need extra tooling for BoringSSL; see [CONTRIBUTING.md](CONTRIBUTING.md).
